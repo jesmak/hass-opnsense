@@ -1326,10 +1326,6 @@ $toreturn = [
             return []
         # _LOGGER.debug(f"[get_telemetry_filesystems] filesystems_info: {filesystems_info}")
         filesystems: list = filesystems_info.get("devices", [])
-        # To conform to the previous data being returned
-        for filesystem in filesystems:
-            filesystem["size"] = filesystem.pop("blocks", None)
-            filesystem["capacity"] = f"{filesystem.pop('used_pct','')}%"
         # _LOGGER.debug(f"[get_telemetry_filesystems] filesystems: {filesystems}")
         return filesystems
 
@@ -1358,7 +1354,10 @@ $toreturn = [
             for connect in connection_info.get("rows", {}):
                 id = connect.get("id", None)
                 vpn_id = vpn.get("vpnid", None)
-                if id and (id == vpn_id or (isinstance(id, str) and id.startswith(vpn_id + "_"))):
+                if id and (
+                    id == vpn_id
+                    or (isinstance(id, str) and id.startswith(vpn_id + "_"))
+                ):
                     total_bytes_recv += self._try_to_int(
                         connect.get("bytes_received", 0), 0
                     )
@@ -1477,6 +1476,15 @@ $toreturn = [
             return {}
         if isinstance(telemetry.get("gateways", []), list):
             telemetry["gateways"] = {}
+        if isinstance(telemetry.get("filesystems", []), list):
+            for filesystem in telemetry.get("filesystems", []):
+                filesystem["blocks"] = filesystem.pop("size", None)
+                try:
+                    filesystem["used_pct"] = int(
+                        filesystem.pop("capacity", "").strip("%")
+                    )
+                except ValueError:
+                    filesystem.pop("capacity", None)
         # _LOGGER.debug(f"[get_telemetry_legacy] telemetry: {telemetry}")
         return telemetry
 
